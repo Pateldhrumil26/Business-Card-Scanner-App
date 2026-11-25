@@ -1,4 +1,5 @@
 @echo off
+set "GRADLE_USER_HOME=D:\UserData_C\.gradle"
 set "PATH=E:\flutter\bin;D:\Android\Sdk\platform-tools;%PATH%"
 cd /d "%~dp0"
 echo ========================================================

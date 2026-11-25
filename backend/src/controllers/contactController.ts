@@ -69,6 +69,81 @@ export const createContact = async (
   }
 };
 
+/**
+ * @route   POST /api/contacts/batch
+ * @desc    Bulk create contacts in database in one single request
+ * @access  Private
+ * @body    { contacts: Array<ContactInput> }
+ */
+export const createBatchContacts = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<any> => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Not authenticated' });
+    }
+
+    const { contacts } = req.body;
+
+    if (!Array.isArray(contacts) || contacts.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a non-empty array of contacts in { contacts: [...] }',
+      });
+    }
+
+    console.log(`\n================ BATCH CONTACT INSERTION: ${contacts.length} ITEMS ================`);
+
+    const validDocs = [];
+    const skipped = [];
+
+    for (let i = 0; i < contacts.length; i++) {
+      const c = contacts[i];
+      const personName = (c.personName || c.name || `Contact #${i + 1}`).trim();
+
+      validDocs.push({
+        userId: req.user._id,
+        businessCardId: c.businessCardId || null,
+        personName,
+        companyName: (c.companyName || '').trim(),
+        designation: (c.designation || '').trim(),
+        phone: (c.phone || '').trim(),
+        alternativePhone: (c.alternativePhone || '').trim(),
+        email: (c.email || '').trim().toLowerCase(),
+        website: (c.website || '').trim(),
+        address: (c.address || '').trim(),
+        city: (c.city || '').trim(),
+        state: (c.state || '').trim(),
+        country: (c.country || 'India').trim(),
+        gstNumber: (c.gstNumber || '').trim(),
+        category: (c.category || 'Business').trim(),
+        servicesOffered: (c.servicesOffered || '').trim(),
+        notes: (c.notes || 'Batch Scanned Card').trim(),
+      });
+    }
+
+    let insertedDocs: any[] = [];
+    if (validDocs.length > 0) {
+      insertedDocs = await Contact.insertMany(validDocs, { ordered: false });
+    }
+
+    console.log(`Successfully bulk-inserted ${insertedDocs.length} contacts into MongoDB.`);
+    console.log(`=========================================================================\n`);
+
+    res.status(201).json({
+      success: true,
+      message: `Successfully saved ${insertedDocs.length} contacts`,
+      totalCreated: insertedDocs.length,
+      skippedCount: skipped.length,
+      contacts: insertedDocs,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getAllContacts = async (
   req: AuthenticatedRequest,
   res: Response,

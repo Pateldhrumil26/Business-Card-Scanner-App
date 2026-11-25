@@ -3,6 +3,7 @@ import {
   uploadCard,
   getPresignedUrl,
   extractCardText,
+  batchExtractCardText,
   getAllCards,
   getCardById,
   deleteCard,
@@ -18,8 +19,9 @@ router.post('/upload', protect, uploadLimiter, uploadCard);
 // Pre-signed S3 URL generation
 router.post('/presigned-url', protect, uploadLimiter, getPresignedUrl);
 
-// Intelligent text extraction
+// Intelligent text extraction (single & batch)
 router.post('/extract', protect, extractCardText);
+router.post('/batch-extract', protect, batchExtractCardText);
 
 // Business cards collection
 router.get('/', protect, getAllCards);

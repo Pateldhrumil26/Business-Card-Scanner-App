@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { body } from 'express-validator';
 import {
   createContact,
+  createBatchContacts,
   getAllContacts,
   getContactById,
   updateContact,
@@ -20,6 +21,7 @@ const contactValidation = [
 ];
 
 router.post('/', protect, contactValidation, createContact);
+router.post('/batch', protect, createBatchContacts);
 router.get('/', protect, getAllContacts);
 router.get('/:id', protect, getContactById);
 router.put('/:id', protect, updateContact);

@@ -43,6 +43,7 @@ const COMPANY_INDICATORS = [
   'works', 'studios', 'studio', 'creations', 'infotech', 'consultancy', 'consulting',
   'holdings', 'systems', 'software', 'digital', 'hardware', 'motors', 'automobiles',
   'electricals', 'electrical', 'refilling',
+  'printer', 'printers', 'printing', 'press', 'offset', 'stationers', 'stationery', 'repairs', 'repairing',
   'jewellers', 'jeweller', 'jewels', 'textiles', 'textile', 'garments', 'fabrics',
   'pharma', 'pharmaceuticals', 'chemicals', 'chem', 'healthcare', 'hospital',
   'clinic', 'diagnostics', 'labs', 'laboratory', 'logistics', 'transport', 'cargo',
@@ -123,8 +124,8 @@ const INVALID_PERSON_WORDS = new Set([
   'sofa', 'chair', 'chairs', 'carpet', 'shampoo', 'wash', 'repairing', 'repair', 'repairs',
   'lining', 'work', 'works', 'cushion', 'cushions', 'furniture', 'wood', 'all type of', 'available',
   'manufacturing', 'manufacturer', 'manufacturers', 'fabrication', 'fitting', 'cleaning',
-  'electrical', 'electricals', 'geyser', 'fan', 'printer', 'refilling', 'cartridge', 'toner',
-  'single phase', 'three phase', 'service', 'services', 'on site', 'genuine', 'solution', 'complete solution',
+  'electrical', 'electricals', 'geyser', 'fan', 'printer', 'printers', 'printing', 'printe', 're', 'printe re', 'all printer', 'refilling', 'cartridge', 'toner', 'offset',
+  'single phase', 'three phase', 'phase', 'service', 'services', 'on site', 'genuine', 'solution', 'complete solution',
 
   // Keyboard keys and hardware UI (scanned from laptop/desk backgrounds)
   'enter', 'shift', 'ctrl', 'control', 'alt', 'space', 'tab', 'caps', 'lock',
@@ -185,10 +186,15 @@ export class CardParserService {
       };
     }
 
-    // Split text into non-empty trimmed lines
+    // Split text into non-empty trimmed lines and normalize common OCR glitches
     const lines = rawText
       .split(/\r?\n/)
-      .map((line) => line.trim())
+      .map((line) => {
+        let l = line.trim();
+        // Fix broken OCR word e.g. "PRINTE RE" -> "PRINTER"
+        l = l.replace(/\bprinte\s+re\b/gi, 'PRINTER');
+        return l;
+      })
       .filter((line) => line.length > 0);
 
     const fullText = lines.join(' \n ');
@@ -681,7 +687,7 @@ export class CardParserService {
         /\b(?:complete solution|genuine toner|printer repairing)\b/i.test(lower) ||
         /\b(?:importers?\s*(?:&|and)\s*distributors?|dealers?\s*(?:&|and)\s*distributors?|manufacturers?\s*(?:&|and)\s*traders?|exporters?\s*(?:&|and)\s*importers?|wholesalers?\s*(?:&|and)\s*retailers?|stockists?\s*(?:&|and)\s*distributors?|stockists?\s*(?:&|and)\s*dealers?|authorised?\s+dealers?|authorized?\s+dealers?)\b/i.test(lower)
       ) {
-        const hasAddress = ADDRESS_KEYWORDS.some((kw) => new RegExp(`\\b${kw}\\b`, 'i').test(lower));
+        const hasAddress = !/\b(?:repairing|manufacturing|lining\s+work|services?|deal\s+in|dealing\s+in|all\s+types?|solution|wash)\b/i.test(lower) && ADDRESS_KEYWORDS.some((kw) => new RegExp(`\\b${kw}\\b`, 'i').test(lower));
         if (!hasAddress) {
           matchedLineIndexes.push(i);
           const parts = line.split(/[,|/•*;\n]/).map((s) => s.trim()).filter((s) => s.length >= 2);
@@ -721,6 +727,11 @@ export class CardParserService {
       if (excludedIndexes.includes(i)) continue;
       const line = lines[i];
       const lower = line.toLowerCase();
+
+      // Disqualify electrical/machinery specifications & service lines from being matched as addresses
+      if (/\b(?:single\s+phase|three\s+phase|phase\s*&\s*three\s+phase|single\s*&\s*three\s+phase|electrical\s+works?|repairing|refilling|cartridge|toner|shampoo\s+wash)\b/i.test(lower)) {
+        continue;
+      }
 
       const hasAddressKeyword = ADDRESS_KEYWORDS.some((kw) =>
         new RegExp(`\\b${kw}\\b`, 'i').test(lower)
@@ -1036,18 +1047,23 @@ export class CardParserService {
 
         const words = subClean.split(/\s+/).filter((w) => w.length > 0);
         const subLower = subClean.toLowerCase();
-        const hasHonorific = /^(?:mr|mrs|ms|dr|er|prof|shri|smt)\.?\s+/i.test(subClean);
         const hasCompanyIndicator = COMPANY_INDICATORS.some((ind) =>
           new RegExp(`\\b${ind}\\b`, 'i').test(subLower)
         );
+        const hasHonorific = !hasCompanyIndicator && /^(?:mr|mrs|ms|dr|er|prof)\.?\s+/i.test(subClean);
 
-        // Disqualify known invalid words, keyboard keys, or slogans
+        // Disqualify known invalid words, keyboard keys, or slogans from person names
         const isInvalidWord = INVALID_PERSON_WORDS.has(subLower) ||
           words.some((w) => INVALID_PERSON_WORDS.has(w.toLowerCase().replace(/[^a-z0-9]/g, '')));
 
         if (isInvalidWord) {
           personScore = -999;
-          companyScore -= 80;
+        }
+
+        // Only penalize company score if candidate is pure UI garbage (keyboard keys, buttons)
+        const isUiGarbage = ['cancel', 'submit', 'save', 'esc', 'ctrl', 'alt', 'del', 'shift', 'backspace', 'enter', 'tab'].includes(subLower);
+        if (isUiGarbage) {
+          companyScore -= 100;
         }
 
         // --- PERSON SCORING ---
@@ -1141,8 +1157,8 @@ export class CardParserService {
           companyScore += 50;
         }
 
-        if (/^(?:m\/s|shree|sri|om)\s+/i.test(subClean)) {
-          companyScore += 30;
+        if (/^(?:m\/s|shri|shree|sri|om)\s+/i.test(subClean)) {
+          companyScore += 35;
         }
 
         if (i === 0 && !hasHonorific && designationResult.lineIndex !== 1 && !hasKnownPersonName && !inlineDesignation) {
@@ -1192,6 +1208,9 @@ export class CardParserService {
         cand.companyScore -= 250;
       }
       if (['service', 'services', 'repairing', 'repair', 'solution', 'solutions', 'enterprise', 'enterprises', 'consultancy', 'trading'].includes(lower)) {
+        cand.companyScore = -999;
+      }
+      if (/^(?:all\s+types?\s+of|we\s+deal\s+in|dealers?\s+in|specialist\s+in|mfrs?\.?\s+of)\b/i.test(lower) || /\b(?:lining\s+work|repairing\s+&\s+lining|shampoo\s+wash)\b/i.test(lower)) {
         cand.companyScore = -999;
       }
       if (/\b(?:importers?\s*(?:&|and)\s*distributors?|dealers?\s*(?:&|and)\s*distributors?|manufacturers?\s*(?:&|and)\s*traders?|exporters?\s*(?:&|and)\s*importers?|wholesalers?\s*(?:&|and)\s*retailers?|stockists?\s*(?:&|and)\s*distributors?|stockists?\s*(?:&|and)\s*dealers?|authorised?\s+dealers?|authorized?\s+dealers?)\b/i.test(lower)) {
@@ -1281,6 +1300,12 @@ export class CardParserService {
       if (INVALID_PERSON_WORDS.has(cleanLower)) return false;
       const words = clean.split(/\s+/).filter((w) => w.length > 0);
       if (words.some((w) => INVALID_PERSON_WORDS.has(w.toLowerCase().replace(/[^a-z0-9]/g, '')))) return false;
+
+      // Disqualify commercial action words, equipment, services or locations
+      if (/\b(?:printer|printers|printing|printe|re|cartridge|refilling|toner|repairing|repair|repairs|service|services|hardware|software|electric|electrical|electricals|electronics|geyser|fan|chair|chairs|sofa|furniture|lining|cushion|wash|shampoo|manufacturing|manufacturer|fabrication|fitting|cleaning|swaminarayan|estate)\b/i.test(cleanLower)) {
+        return false;
+      }
+
       const hasNameSuffix = /(?:bhai|ben|bahen|kumar|lal|ji|rao)$/i.test(clean) && !/(?:mumbai|chennai|dubai)$/i.test(cleanLower);
       if (words.length === 1 && !hasNameSuffix && !COMMON_PERSON_NAMES.has(words[0].toLowerCase()) && !/^(?:mr|mrs|ms|dr|er|prof)\.?/i.test(clean)) {
         return false;
@@ -1334,6 +1359,21 @@ export class CardParserService {
         }
 
         if (uniquePersons.length >= 2) break;
+      }
+    }
+
+    // If no valid person name was detected in text lines, attempt smart name recovery from email prefix
+    // e.g. "maheshhanat@gmail.com" -> "Mahesh Hanat"
+    if (uniquePersons.length === 0 && primaryEmail) {
+      const recoveredName = CardParserService.extractNameFromEmail(primaryEmail);
+      if (recoveredName) {
+        uniquePersons.push({
+          text: recoveredName,
+          lineIndex: -1,
+          personScore: 100,
+          companyScore: -100,
+          wasSplitLine: false,
+        });
       }
     }
 
@@ -1403,6 +1443,50 @@ export class CardParserService {
       hasMultiplePersons: detectedPersons.length >= 2,
       detectedPersons,
     };
+  }
+
+  /**
+   * Recovers a person's first and last name from email username if no name was detected in card text
+   * e.g. "maheshhanat@gmail.com" -> "Mahesh Hanat"
+   * e.g. "dhrumil.patel@gmail.com" -> "Dhrumil Patel"
+   * e.g. "rajesh_shah@yahoo.com" -> "Rajesh Shah"
+   */
+  static extractNameFromEmail(email: string): string {
+    if (!email || !email.includes('@')) return '';
+    const rawUsername = email.split('@')[0].toLowerCase();
+    // Exclude generic business email usernames
+    if (/^(?:info|contact|support|sales|admin|office|help|service|services|billing|mail|enquiry|inquiry|careers|jobs|team)$/i.test(rawUsername)) {
+      return '';
+    }
+
+    // 1. If username has dot, underscore or hyphen (e.g. mahesh.hanat or dhrumil_patel)
+    const separatedParts = rawUsername.split(/[._-]+/).filter((p) => p.length >= 2);
+    if (separatedParts.length >= 2) {
+      const cleanParts = separatedParts.map((p) => p.replace(/\d+/g, '')).filter((p) => p.length >= 2);
+      if (cleanParts.length >= 2) {
+        return cleanParts.map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+      }
+    }
+
+    // 2. Continuous username (e.g. "maheshhanat" or "dhrumil226")
+    const cleanUser = rawUsername.replace(/\d+/g, '');
+    if (cleanUser.length < 5) return '';
+
+    // Check if prefix matches a known first name in COMMON_PERSON_NAMES
+    for (const knownName of COMMON_PERSON_NAMES) {
+      if (knownName.length >= 3 && cleanUser.startsWith(knownName)) {
+        const remainder = cleanUser.slice(knownName.length);
+        if (remainder.length >= 3) {
+          const firstName = knownName.charAt(0).toUpperCase() + knownName.slice(1);
+          const lastName = remainder.charAt(0).toUpperCase() + remainder.slice(1);
+          return `${firstName} ${lastName}`;
+        } else if (remainder.length === 0) {
+          return knownName.charAt(0).toUpperCase() + knownName.slice(1);
+        }
+      }
+    }
+
+    return '';
   }
 
   static cleanPersonName(raw: string): string {

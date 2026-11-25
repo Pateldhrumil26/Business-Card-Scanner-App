@@ -157,6 +157,79 @@ export const extractCardText = async (
 };
 
 /**
+ * @route   POST /api/cards/batch-extract
+ * @desc    Extract structured contact details for multiple business cards in one request
+ * @access  Private
+ * @body    { cards: Array<{ rawText: string; cardId?: string; lineData?: any; index?: number }> }
+ */
+export const batchExtractCardText = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<any> => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Not authenticated' });
+    }
+
+    const { cards } = req.body;
+
+    if (!Array.isArray(cards) || cards.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a non-empty array of cards to extract in { cards: [...] }',
+      });
+    }
+
+    console.log(`\n================ BATCH EXTRACTION: ${cards.length} CARDS ================`);
+
+    const results = [];
+    for (let i = 0; i < cards.length; i++) {
+      const cardItem = cards[i];
+      const rawText = cardItem.rawText || '';
+      const lineData = cardItem.lineData;
+      const cardId = cardItem.cardId;
+      const index = cardItem.index ?? i;
+
+      let extractedData: any = {};
+      if (rawText && typeof rawText === 'string' && rawText.trim().length > 0) {
+        extractedData = CardParserService.parseBusinessCardText(rawText, lineData);
+
+        if (cardId) {
+          await BusinessCard.findOneAndUpdate(
+            { _id: cardId, userId: req.user._id },
+            {
+              extractedText: rawText,
+              processingStatus: 'completed',
+            }
+          );
+        }
+      }
+
+      console.log(`Card #${i + 1}: Name="${extractedData.personName || ''}", Comp="${extractedData.companyName || ''}", Phone="${extractedData.phone || ''}"`);
+
+      results.push({
+        index,
+        cardId,
+        rawText,
+        extracted: extractedData,
+      });
+    }
+
+    console.log(`=========================================================================\n`);
+
+    res.status(200).json({
+      success: true,
+      message: `Successfully extracted ${results.length} cards`,
+      total: results.length,
+      data: results,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * @route   GET /api/cards
  * @desc    Get all scanned cards for authenticated user
  * @access  Private

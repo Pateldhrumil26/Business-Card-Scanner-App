@@ -8,11 +8,13 @@ class ApiEndpoints {
   // Business Cards
   static const String uploadCard = '/cards/upload';
   static const String extractCard = '/cards/extract';
+  static const String batchExtractCard = '/cards/batch-extract';
   static const String cards = '/cards';
   static String cardById(String id) => '/cards/$id';
 
   // Contacts
   static const String contacts = '/contacts';
+  static const String batchContacts = '/contacts/batch';
   static String contactById(String id) => '/contacts/$id';
   static String contactVcf(String id) => '/contacts/$id/vcf';
 

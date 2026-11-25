@@ -135,6 +135,40 @@ class ContactProvider with ChangeNotifier {
     return false;
   }
 
+  /// Batch Save multiple contacts at once using backend batch endpoint
+  Future<int> createBatchContacts(List<ContactModel> contactsList) async {
+    if (contactsList.isEmpty) return 0;
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final payload = contactsList.map((c) => c.toJson()).toList();
+      final res = await _api.post(
+        ApiEndpoints.batchContacts,
+        data: {'contacts': payload},
+      );
+
+      if (res.statusCode == 201 && res.data['contacts'] != null) {
+        final List rawList = res.data['contacts'];
+        final createdContacts = rawList.map((e) => ContactModel.fromJson(e)).toList();
+        _contacts.insertAll(0, createdContacts);
+        _totalContacts += createdContacts.length;
+        _isLoading = false;
+        notifyListeners();
+        return createdContacts.length;
+      }
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+    } catch (e) {
+      _errorMessage = 'Failed to batch save contacts: $e';
+    }
+
+    _isLoading = false;
+    notifyListeners();
+    return 0;
+  }
+
   /// Update contact
   Future<bool> updateContact(ContactModel contact) async {
     _isLoading = true;
