@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../core/constants/app_colors.dart';
 import '../core/utils/helpers.dart';
@@ -33,19 +34,35 @@ class ContactCard extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           child: Row(
             children: [
-              // Avatar with Initials
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: AppColors.primary,
-                child: Text(
-                  Helpers.getInitials(contact.personName),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
+              // Card Photo Thumbnail or Initials Avatar
+              if (contact.cardImageUrl != null && contact.cardImageUrl!.trim().isNotEmpty)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: contact.cardImageUrl!.startsWith('http')
+                        ? Image.network(
+                            contact.cardImageUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _buildFallbackAvatar(),
+                          )
+                        : (File(contact.cardImageUrl!).existsSync()
+                            ? Image.file(
+                                File(contact.cardImageUrl!),
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => _buildFallbackAvatar(),
+                              )
+                            : _buildFallbackAvatar()),
                   ),
-                ),
-              ),
+                )
+              else
+                _buildFallbackAvatar(),
               const SizedBox(width: 14),
 
               // Contact Information
@@ -123,6 +140,21 @@ class ContactCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFallbackAvatar() {
+    return CircleAvatar(
+      radius: 24,
+      backgroundColor: AppColors.primary,
+      child: Text(
+        Helpers.getInitials(contact.personName),
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+          fontSize: 14,
         ),
       ),
     );

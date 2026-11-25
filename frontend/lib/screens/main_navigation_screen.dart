@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import '../core/constants/app_colors.dart';
+import '../core/utils/document_scanner_helper.dart';
 import 'contacts/contact_list_screen.dart';
 import 'dashboard/dashboard_screen.dart';
 import 'profile/profile_screen.dart';
 import 'scanner/scanner_screen.dart';
 import 'scanner/batch_scanner_screen.dart';
+import 'scanner/batch_review_screen.dart';
+import 'scanner/ocr_processing_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   final int initialIndex;
@@ -25,19 +28,50 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   void _onTabSelected(int index) {
     if (index == 1) {
-      // Single Card Scanner
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const ScannerScreen()),
-      );
+      // Single Card Scanner via Google Native Document Scanner
+      _startNativeDocumentScan(isBatch: false);
     } else if (index == 2) {
-      // Batch / Multi-Card Scanner
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const BatchScannerScreen()),
-      );
+      // Batch / Multi-Card Scanner via Google Native Document Scanner
+      _startNativeDocumentScan(isBatch: true);
     } else {
       setState(() {
         _currentIndex = index;
       });
+    }
+  }
+
+  Future<void> _startNativeDocumentScan({required bool isBatch}) async {
+    try {
+      final images = await DocumentScannerHelper.scanCards(
+        isBatch: isBatch,
+        pageLimit: isBatch ? 25 : 1,
+      );
+
+      if (images.isNotEmpty && mounted) {
+        if (isBatch) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => BatchReviewScreen(photos: images),
+            ),
+          );
+        } else {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => OcrProcessingScreen(cardImageFile: images.first),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('[Native Document Scanner Fallback]: $e');
+      if (mounted) {
+        // Fallback to in-app camera screen
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => isBatch ? const BatchScannerScreen() : const ScannerScreen(),
+          ),
+        );
+      }
     }
   }
 

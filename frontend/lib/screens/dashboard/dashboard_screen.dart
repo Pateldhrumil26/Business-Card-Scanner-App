@@ -7,9 +7,11 @@ import '../../providers/dashboard_provider.dart';
 import '../../providers/contact_provider.dart';
 import '../../widgets/contact_card.dart';
 import '../../widgets/stat_card.dart';
+import '../../core/utils/document_scanner_helper.dart';
 import '../contacts/contact_details_screen.dart';
 import '../contacts/contact_list_screen.dart';
 import '../scanner/scanner_screen.dart';
+import '../scanner/ocr_processing_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -169,10 +171,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                           const SizedBox(height: 14),
                           ElevatedButton.icon(
-                            onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => const ScannerScreen()),
-                              );
+                            onPressed: () async {
+                              try {
+                                final images = await DocumentScannerHelper.scanCards(isBatch: false, pageLimit: 1);
+                                if (images.isNotEmpty && context.mounted) {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => OcrProcessingScreen(cardImageFile: images.first),
+                                    ),
+                                  );
+                                  return;
+                                }
+                              } catch (_) {}
+                              if (context.mounted) {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (_) => const ScannerScreen()),
+                                );
+                              }
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.white,
@@ -180,7 +195,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             ),
-                            icon: const Icon(Icons.camera_alt_outlined, size: 16),
+                            icon: const Icon(Icons.document_scanner, size: 16),
                             label: const Text('Start Scan', style: TextStyle(fontWeight: FontWeight.w700)),
                           ),
                         ],

@@ -584,8 +584,8 @@ class _BatchReviewScreenState extends State<BatchReviewScreen> {
       }
 
       contactsToSave.add(item.contact.copyWith(
-        cardImageUrl: cardImageUrl,
-        businessCardId: uploadedCardId,
+        cardImageUrl: cardImageUrl.isNotEmpty ? cardImageUrl : item.photo.path,
+        businessCardId: uploadedCardId.isNotEmpty ? uploadedCardId : null,
       ));
     }
 

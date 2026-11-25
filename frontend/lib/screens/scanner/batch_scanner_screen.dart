@@ -7,6 +7,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/helpers.dart';
+import '../../core/utils/card_crop_helper.dart';
+import '../../core/utils/document_scanner_helper.dart';
 import 'batch_review_screen.dart';
 
 class BatchScannerScreen extends StatefulWidget {
@@ -256,8 +258,8 @@ class _BatchScannerScreenState extends State<BatchScannerScreen> with WidgetsBin
       final XFile photo = await _cameraController!.takePicture();
       final File imageFile = File(photo.path);
 
-      // Automatically crop image to the card guide frame area
-      final File finalCardFile = await _cropToCardGuide(imageFile);
+      // Automatically isolate card and remove background table/desk
+      final File finalCardFile = await CardCropHelper.autoCropToCard(imageFile);
 
       if (!mounted) return;
 
@@ -270,7 +272,7 @@ class _BatchScannerScreenState extends State<BatchScannerScreen> with WidgetsBin
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Card #${_capturedPhotos.length} captured! Total: ${_capturedPhotos.length} cards'),
+          content: Text('Card #${_capturedPhotos.length} captured! Only card saved'),
           duration: const Duration(milliseconds: 1200),
           backgroundColor: AppColors.primary,
           behavior: SnackBarBehavior.floating,
@@ -288,17 +290,30 @@ class _BatchScannerScreenState extends State<BatchScannerScreen> with WidgetsBin
     try {
       final List<XFile> images = await _picker.pickMultiImage(imageQuality: 100);
       if (images.isNotEmpty && mounted) {
-        setState(() {
-          _capturedPhotos.addAll(images.map((img) => File(img.path)));
-        });
-        Helpers.showSnackBar(
-          context,
-          'Added ${images.length} photos! Total: ${_capturedPhotos.length} cards',
-          isSuccess: true,
-        );
+        setState(() => _isCapturing = true);
+        Helpers.showSnackBar(context, 'Cropping and isolating ${images.length} cards...', isSuccess: true);
+
+        final List<File> croppedFiles = [];
+        for (final img in images) {
+          final cropped = await CardCropHelper.autoCropToCard(File(img.path));
+          croppedFiles.add(cropped);
+        }
+
+        if (mounted) {
+          setState(() {
+            _capturedPhotos.addAll(croppedFiles);
+            _isCapturing = false;
+          });
+          Helpers.showSnackBar(
+            context,
+            'Added ${images.length} cards! Background removed.',
+            isSuccess: true,
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
+        setState(() => _isCapturing = false);
         Helpers.showSnackBar(context, 'Failed to pick images: $e', isError: true);
       }
     }
@@ -312,6 +327,20 @@ class _BatchScannerScreenState extends State<BatchScannerScreen> with WidgetsBin
         builder: (_) => BatchReviewScreen(photos: List.from(_capturedPhotos)),
       ),
     );
+  }
+
+  Future<void> _launchNativeDocumentScanner() async {
+    try {
+      final images = await DocumentScannerHelper.scanCards(isBatch: true, pageLimit: 25);
+      if (images.isNotEmpty && mounted) {
+        setState(() {
+          _capturedPhotos.addAll(images);
+        });
+        _proceedToReview();
+      }
+    } catch (e) {
+      debugPrint('[Native Scanner from Batch Error]: $e');
+    }
   }
 
   void _removePhoto(int index) {
@@ -463,21 +492,40 @@ class _BatchScannerScreenState extends State<BatchScannerScreen> with WidgetsBin
               shadows: [Shadow(color: Colors.black54, blurRadius: 4)],
             ),
           ),
-          IconButton(
-            onPressed: _toggleFlash,
-            icon: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.35),
-                shape: BoxShape.circle,
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                tooltip: 'Google Document Scanner (Edge Snapping)',
+                onPressed: _launchNativeDocumentScanner,
+                icon: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.accent,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.document_scanner, color: Colors.white, size: 20),
+                ),
               ),
-              child: Icon(
-                _isFlashOn ? Icons.flash_on : Icons.flash_off,
-                color: _isFlashOn ? Colors.amber : Colors.white,
-                size: 20,
+              const SizedBox(width: 6),
+              IconButton(
+                onPressed: _toggleFlash,
+                icon: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.35),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    _isFlashOn ? Icons.flash_on : Icons.flash_off,
+                    color: _isFlashOn ? Colors.amber : Colors.white,
+                    size: 20,
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ],
       ),

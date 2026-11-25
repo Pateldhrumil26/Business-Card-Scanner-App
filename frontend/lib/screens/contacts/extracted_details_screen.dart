@@ -40,8 +40,6 @@ class _ExtractedDetailsScreenState extends State<ExtractedDetailsScreen> {
   late TextEditingController _person2PhoneController;
   late TextEditingController _emailController;
   late TextEditingController _addressController;
-  late TextEditingController _websiteController;
-  late TextEditingController _notesController;
 
   bool _isSaving = false;
   bool _showFrontPreview = true;
@@ -73,8 +71,6 @@ class _ExtractedDetailsScreenState extends State<ExtractedDetailsScreen> {
     _person2PhoneController = TextEditingController(text: person2Phone);
     _emailController = TextEditingController(text: c.email);
     _addressController = TextEditingController(text: c.address);
-    _websiteController = TextEditingController(text: c.website);
-    _notesController = TextEditingController(text: c.notes);
   }
 
   @override
@@ -86,8 +82,6 @@ class _ExtractedDetailsScreenState extends State<ExtractedDetailsScreen> {
     _person2PhoneController.dispose();
     _emailController.dispose();
     _addressController.dispose();
-    _websiteController.dispose();
-    _notesController.dispose();
     super.dispose();
   }
 
@@ -111,8 +105,8 @@ class _ExtractedDetailsScreenState extends State<ExtractedDetailsScreen> {
     final company = _companyController.text.trim();
     final address = _addressController.text.trim();
     final email = _emailController.text.trim().toLowerCase();
-    final website = _websiteController.text.trim();
-    final notes = _notesController.text.trim();
+    final website = widget.initialContact.website;
+    final notes = widget.initialContact.notes;
 
     // Primary Contact (preserves parsed city/state/services in the background)
     final primaryContact = ContactModel(
@@ -444,26 +438,6 @@ class _ExtractedDetailsScreenState extends State<ExtractedDetailsScreen> {
                   label: 'Business Address',
                   hint: 'Office No, Building, Area, City, State, PIN',
                   prefixIcon: Icons.location_on_outlined,
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 12),
-
-                // Website (Optional)
-                CustomTextField(
-                  controller: _websiteController,
-                  label: 'Website (Optional)',
-                  hint: 'https://www.company.com',
-                  prefixIcon: Icons.language_outlined,
-                  keyboardType: TextInputType.url,
-                ),
-                const SizedBox(height: 12),
-
-                // Meeting Notes (Optional)
-                CustomTextField(
-                  controller: _notesController,
-                  label: 'Meeting Notes / Tags (Optional)',
-                  hint: 'Notes or tags about card...',
-                  prefixIcon: Icons.note_outlined,
                   maxLines: 2,
                 ),
 

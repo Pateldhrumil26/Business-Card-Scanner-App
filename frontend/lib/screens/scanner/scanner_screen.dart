@@ -5,7 +5,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/helpers.dart';
+import '../../core/utils/card_crop_helper.dart';
+import '../../core/utils/document_scanner_helper.dart';
 import 'crop_screen.dart';
+import 'ocr_processing_screen.dart';
 
 class ScannerScreen extends StatefulWidget {
   const ScannerScreen({super.key});
@@ -169,7 +172,10 @@ class _ScannerScreenState extends State<ScannerScreen> with WidgetsBindingObserv
 
     try {
       final XFile photo = await _cameraController!.takePicture();
-      final File imageFile = File(photo.path);
+      final File rawImageFile = File(photo.path);
+
+      // Automatically crop card removing background desk/table
+      final File imageFile = await CardCropHelper.autoCropToCard(rawImageFile);
 
       if (!mounted) return;
 
@@ -218,7 +224,8 @@ class _ScannerScreenState extends State<ScannerScreen> with WidgetsBindingObserv
       );
 
       if (image != null && mounted) {
-        final file = File(image.path);
+        final rawFile = File(image.path);
+        final file = await CardCropHelper.autoCropToCard(rawFile);
         if (_isTwoSidedMode) {
           if (_scanStep == 1) {
             setState(() {
@@ -258,6 +265,21 @@ class _ScannerScreenState extends State<ScannerScreen> with WidgetsBindingObserv
         ),
       ),
     );
+  }
+
+  Future<void> _launchNativeDocumentScanner() async {
+    try {
+      final images = await DocumentScannerHelper.scanCards(isBatch: false, pageLimit: 1);
+      if (images.isNotEmpty && mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => OcrProcessingScreen(cardImageFile: images.first),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('[Native Scanner from Single Error]: $e');
+    }
   }
 
   @override
@@ -416,6 +438,20 @@ class _ScannerScreenState extends State<ScannerScreen> with WidgetsBindingObserv
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              IconButton(
+                tooltip: 'Google Document Scanner (Edge Snapping)',
+                onPressed: _launchNativeDocumentScanner,
+                icon: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: const BoxDecoration(
+                    color: AppColors.accent,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.document_scanner, color: Colors.white, size: 20),
+                ),
+              ),
+              const SizedBox(width: 4),
               IconButton(
                 onPressed: _toggleFlash,
                 icon: Container(

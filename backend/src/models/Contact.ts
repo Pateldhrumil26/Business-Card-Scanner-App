@@ -14,6 +14,16 @@ const contactSchema = new Schema<IContact>(
       ref: 'BusinessCard',
       default: null,
     },
+    cardImageUrl: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    backImageUrl: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     personName: {
       type: String,
       required: [true, 'Person name is required'],

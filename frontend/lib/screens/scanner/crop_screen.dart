@@ -56,14 +56,11 @@ class _CropScreenState extends State<CropScreen> {
           _imageHeight = decoded.height;
           _isLoading = false;
 
-          // Default initial crop: center 85% width, standard card ratio ~1.6
-          final cardAspect = 1.6;
-          _cropLeft = 0.06;
-          _cropRight = 0.94;
-          final widthFraction = _cropRight - _cropLeft;
-          final heightFraction = (widthFraction * _imageWidth) / (_imageHeight * cardAspect);
-          _cropTop = ((1.0 - heightFraction) / 2).clamp(0.05, 0.40);
-          _cropBottom = (_cropTop + heightFraction).clamp(0.50, 0.95);
+          // The card is already auto-cropped, default to full card boundary
+          _cropLeft = 0.01;
+          _cropRight = 0.99;
+          _cropTop = 0.01;
+          _cropBottom = 0.99;
         });
       }
     } catch (e) {

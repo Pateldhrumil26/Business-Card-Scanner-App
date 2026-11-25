@@ -147,6 +147,8 @@ class ContactModel {
       'servicesOffered': servicesOffered,
       'notes': notes,
       if (businessCardId != null) 'businessCardId': businessCardId,
+      if (cardImageUrl != null && cardImageUrl!.isNotEmpty) 'cardImageUrl': cardImageUrl,
+      if (backImageUrl != null && backImageUrl!.isNotEmpty) 'backImageUrl': backImageUrl,
     };
   }
 

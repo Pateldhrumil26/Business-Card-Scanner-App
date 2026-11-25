@@ -15,6 +15,8 @@ export const createContact = async (
 
     const {
       businessCardId,
+      cardImageUrl,
+      backImageUrl,
       personName,
       companyName,
       designation,
@@ -42,6 +44,8 @@ export const createContact = async (
     const contact = await Contact.create({
       userId: req.user._id,
       businessCardId: businessCardId || null,
+      cardImageUrl: (cardImageUrl || '').trim(),
+      backImageUrl: (backImageUrl || '').trim(),
       personName: personName.trim(),
       companyName: (companyName || '').trim(),
       designation: (designation || '').trim(),
@@ -106,6 +110,8 @@ export const createBatchContacts = async (
       validDocs.push({
         userId: req.user._id,
         businessCardId: c.businessCardId || null,
+        cardImageUrl: (c.cardImageUrl || '').trim(),
+        backImageUrl: (c.backImageUrl || '').trim(),
         personName,
         companyName: (c.companyName || '').trim(),
         designation: (c.designation || '').trim(),
@@ -195,7 +201,7 @@ export const getAllContacts = async (
 
     const total = await Contact.countDocuments(query);
     const contacts = await Contact.find(query)
-      .populate('businessCardId', 'originalImage')
+      .populate('businessCardId', 'originalImage backImage')
       .sort(sortOptions)
       .skip(skip)
       .limit(limitNum);
@@ -231,7 +237,7 @@ export const getContactById = async (
     const contact = await Contact.findOne({
       _id: req.params.id,
       userId: req.user._id,
-    }).populate('businessCardId', 'originalImage extractedText');
+    }).populate('businessCardId', 'originalImage backImage extractedText');
 
     if (!contact) {
       return res.status(404).json({
@@ -287,6 +293,9 @@ export const updateContact = async (
       'category',
       'servicesOffered',
       'notes',
+      'cardImageUrl',
+      'backImageUrl',
+      'businessCardId',
     ];
 
     for (const field of updatableFields) {

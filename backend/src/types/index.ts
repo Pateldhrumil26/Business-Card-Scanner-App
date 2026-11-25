@@ -29,6 +29,8 @@ export interface IContact extends Document {
   _id: Types.ObjectId;
   userId: Types.ObjectId;
   businessCardId?: Types.ObjectId;
+  cardImageUrl?: string;
+  backImageUrl?: string;
   personName: string;
   companyName: string;
   designation: string;
