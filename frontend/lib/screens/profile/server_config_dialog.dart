@@ -145,20 +145,25 @@ class _ServerConfigDialogState extends State<ServerConfigDialog> {
             // Test Connection Button
             SizedBox(
               width: double.infinity,
-              height: 36,
+              height: 44,
               child: OutlinedButton.icon(
                 icon: _isTesting
                     ? const SizedBox(
-                        width: 14,
-                        height: 14,
+                        width: 16,
+                        height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.network_check, size: 18),
-                label: Text(_isTesting ? 'Testing connection...' : 'Test Connection'),
+                label: Text(
+                  _isTesting ? 'Testing connection...' : 'Test Connection',
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.primary,
-                  side: const BorderSide(color: AppColors.primary),
+                  side: const BorderSide(color: AppColors.primary, width: 1.5),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                  alignment: Alignment.center,
                 ),
                 onPressed: _isTesting ? null : _testConnection,
               ),
@@ -198,19 +203,27 @@ class _ServerConfigDialogState extends State<ServerConfigDialog> {
               runSpacing: 6,
               children: [
                 ActionChip(
-                  avatar: const Icon(Icons.wifi, size: 16, color: AppColors.primary),
-                  label: const Text('Wi-Fi Phone (192.168.1.2:8080)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                  avatar: const Icon(Icons.usb, size: 16, color: AppColors.accent),
+                  label: const Text('USB reverse (127.0.0.1:8080)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                   backgroundColor: Colors.blue.shade50,
                   onPressed: () {
-                    _urlController.text = 'http://192.168.1.2:8080/api';
+                    _urlController.text = 'http://127.0.0.1:8080/api';
                     _testConnection();
                   },
                 ),
                 ActionChip(
-                  avatar: const Icon(Icons.usb, size: 16, color: AppColors.accent),
-                  label: const Text('USB reverse (127.0.0.1:8080)', style: TextStyle(fontSize: 11)),
+                  avatar: const Icon(Icons.wifi, size: 16, color: AppColors.primary),
+                  label: const Text('Wi-Fi Phone (192.168.1.4:8080)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
                   onPressed: () {
-                    _urlController.text = 'http://127.0.0.1:8080/api';
+                    _urlController.text = 'http://192.168.1.4:8080/api';
+                    _testConnection();
+                  },
+                ),
+                ActionChip(
+                  avatar: const Icon(Icons.wifi, size: 16, color: AppColors.textSecondary),
+                  label: const Text('Wi-Fi Phone (192.168.1.2:8080)', style: TextStyle(fontSize: 11)),
+                  onPressed: () {
+                    _urlController.text = 'http://192.168.1.2:8080/api';
                     _testConnection();
                   },
                 ),
@@ -238,12 +251,12 @@ class _ServerConfigDialogState extends State<ServerConfigDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600)),
         ),
         CustomButton(
           text: 'Save URL',
-          width: 110,
-          height: 38,
+          width: 120,
+          height: 44,
           onPressed: () => _saveUrl(_urlController.text),
         ),
       ],

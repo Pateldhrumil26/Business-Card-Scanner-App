@@ -39,6 +39,8 @@ class CustomButton extends StatelessWidget {
               style: OutlinedButton.styleFrom(
                 side: BorderSide(color: effectiveText, width: 1.5),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                alignment: Alignment.center,
               ),
               child: _buildChild(effectiveText),
             )
@@ -48,6 +50,8 @@ class CustomButton extends StatelessWidget {
                 backgroundColor: effectiveBg,
                 foregroundColor: effectiveText,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                alignment: Alignment.center,
                 elevation: 0,
               ),
               child: _buildChild(effectiveText),
